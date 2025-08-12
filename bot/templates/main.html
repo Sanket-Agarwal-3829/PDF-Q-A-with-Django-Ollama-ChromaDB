@@ -1,0 +1,130 @@
+{% load static %} 
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PDF Q&A</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <img src="{% static 'images/freedman logo.png' %}" alt="Logo">
+      </div>
+      <h1>PDF Q&amp;A</h1>
+    </header>
+
+    <!-- Upload / Controls -->
+    <section class="pdfs" style="display: flex; align-items: flex-end; gap: 1rem;">
+      <div class="card panel" style="align-items:flex-end;">
+        <div>
+          <div id="preloader" class="hidden">
+              <div class="spinner2"></div>
+              <p>Indexing PDF, please wait...</p>
+          </div>
+          <label>Upload PDF</label>
+          <form method="post", action="{% url 'upload_pdf' %}" enctype="multipart/form-data" style="height: 100%; width: 100%; flex: 0 0 auto;" onsubmit="showPreloader()">
+              {% csrf_token %}
+              <input type="file" name="pdf" id="pdfFile" accept="application/pdf" style="margin-bottom: 10px;">
+              
+              <button type="submit" id="uploadBtn" class="btn">Index PDF</button>
+          </form>
+        </div>
+      </div>
+
+    <!-- Current PDFs Card -->
+      <div class="card panel" style="flex: 1;">
+        <label>PDF List</label>
+        {% if pdf_list %}
+          <ul class="pdf_list">
+            {% for pdf in pdf_list %}
+              <li style="margin-bottom: 8px;">
+                <a style="color:aliceblue" href="{{ pdf.url }}" target="_blank" rel="noopener">{{ pdf.name }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>No PDFs indexed yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Q&A -->
+    <section class="grid">
+      <div class="card panel">
+        <label>Ask a question</label>
+        <div class="row" style="align-items:center;">
+            <input id="question" name="question" class="input" placeholder="e.g., What is supervised learning?" />
+            <button type="submit" id="askBtn" class="btn">Ask</button>
+        </div>
+
+
+        <div class="badgeline">
+          <label for="languageSelect" class="sr-only">Language</label>
+          <div class="badge select">
+            <select id="languageSelect" aria-label="Language">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+            </select>
+          </div>
+        </div>
+        <div id="thinking" class="status hidden"><span class="spinner "></span> thinking…</div>
+        <div id="answer" class="answer scroller" style="max-height:70%"></div>
+
+        <div id="fallback" class="hidden" style="margin-top:12px;">
+          <span class="status" style="display:block;margin-bottom:8px;">
+            I couldn’t find this in the document. Search the web instead?
+          </span>
+          <button id="webBtn" class="btn secondary">Search Web</button>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <label>Citations</label>
+        <div id="citations" class="links status scroller">No citations yet.</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Placeholder JS — You’ll integrate this with your backend later.
+    document.getElementById("webBtn").onclick = () => alert("Web search logic goes here");
+  </script>
+
+  <script>
+    document.getElementById("askBtn").addEventListener("click", function () {
+        const question = document.getElementById("question").value;
+        const languageSelect = document.getElementById('languageSelect').value;
+        document.getElementById('thinking').classList.remove("hidden")
+        fetch("{% url 'ask_question' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ question: question ,lang_code: languageSelect})
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("answer").innerText = data.answer;
+            document.getElementById('thinking').classList.add("hidden")
+            document.getElementById('citations').innerText = data.context_chunks
+        })
+        .catch(error => console.error("Error:", error));
+    });
+</script>
+
+<script>
+  function showPreloader() {
+      document.getElementById("preloader").classList.remove("hidden");
+  }
+</script>
+
+</body>
+</html>
